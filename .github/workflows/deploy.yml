@@ -13,6 +13,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v2
 
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ap-south-1
+
+      - name: Install AWS CLI
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y awscli
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
@@ -21,13 +33,9 @@ jobs:
       - name: Build Docker image
         run: docker build -t my-python-app .
       
+    
       - name: Login to AWS ECR
-        run: |
-          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
-          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
-          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }} --profile ecr-user
-          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }} --profile ecr-user
-          aws ecr get-login-password --region ap-south-1 --profile ecr-user | docker login --username AWS --password-stdin 988392387312.dkr.ecr.ap-south-1.amazonaws.com
+        run: aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 988392387312.dkr.ecr.ap-south-1.amazonaws.com
 
       - name: Push Docker image to ECR
         run: |
