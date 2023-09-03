@@ -1,0 +1,43 @@
+name: Deploy to Elastic Beanstalk
+
+on:
+  push:
+    branches:
+      - main  # Change this to the branch you want to trigger on
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Build Docker image
+        run: |
+          docker build -t my-python-app .
+          echo ${{ secrets.AWS_ACCESS_KEY_ID }} | aws ecr get-login-password --region ap-south-1 | docker login --username AWS --password-stdin 988392387312.dkr.ecr.ap-south-1.amazonaws.com
+          docker tag my-python-app:latest 988392387312.dkr.ecr.ap-south-1.amazonaws.com/my-python-app:latest
+          docker push 988392387312.dkr.ecr.ap-south-1.amazonaws.com/my-python-app:latest
+
+      - name: Deploy to Elastic Beanstalk
+        run: |
+          aws configure set aws_access_key_id ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws configure set aws_secret_access_key ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws elasticbeanstalk create-application-version \
+            --application-name python-app \
+            --version-label "v${{ github.run_number }}" \
+            --source-bundle S3Bucket=<your-s3-bucket>,S3Key=my-python-app.zip
+
+          aws elasticbeanstalk update-environment \
+            --application-name python-app \
+            --environment-name python-env \
+            --version-label "v${{ github.run_number }}"
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
